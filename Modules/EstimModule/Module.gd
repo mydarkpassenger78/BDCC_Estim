@@ -26,6 +26,7 @@ func _init():
 	]
 	items = []
 	events = [
+		"res://Modules/EstimModule/EstimElizaEvent.gd"
 	]
 	gameExtenders = [
 		"res://Modules/EstimModule/EstimModuleExtender.gd"
