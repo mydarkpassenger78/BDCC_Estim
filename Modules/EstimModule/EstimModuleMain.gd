@@ -14,6 +14,10 @@ var ampl_a = 0.0
 var ampl_b = 0.0
 var phase_a = 0.0
 var phase_b = 0.0
+var pain_pulse_a = 0
+var pain_pulse_b = 0
+var pain_wait_a = 0.0
+var pain_wait_b = 0.0
 
 # settings
 var freq_pain = 50.0
@@ -29,7 +33,7 @@ var calib_ampl = 1.0
 enum EstimMode { Calib, Pleasure, Pain}
 
 # changed depending on context
-var cuttent_mode = EstimMode.Calid
+var current_mode = EstimMode.Calib
 var duration_a = 1.0
 var duration_b = 1.0
 var freq_a_min = 0.0
@@ -41,8 +45,10 @@ var ampl_a_incr = 0.0
 var ampl_b_min = 0.0
 var ampl_b_incr = 0.0
 var ampl_pain = 1.0
-var pain_a = 0.0
-var pain_b = 0.0
+var pain_ampl_a = 0.0
+var pain_ampl_b = 0.0
+var pain_wait_min = 0.0
+var pain_wait_max = 0.0
 
 var playback: AudioStreamPlayback = null # Actual playback stream, assigned in _ready().
 
@@ -54,7 +60,7 @@ func _ready():
 	player.stream = AudioStreamGenerator.new();
 	player.stream.mix_rate = sample_hz # Setting mix rate is only possible before play().
 	playback = player.get_stream_playback()
-	update(2.0, 1.0, 3.0, 1.0)
+	update_pleasure(2.0, 1.0, 3.0, 1.0)
 	fill_buffer(0.0) # Prefill, do before play() to avoid delay.
 	player.play()
 
@@ -62,10 +68,13 @@ func _ready():
 func _process(delta):
 	fill_buffer(delta)
 
-# Update signal generation. upd_duration is the pulse duration in seconds, and upd_ampl
+# Update signal generation in pleasure mode. upd_duration is the pulse duration in seconds, and upd_ampl
 #  is the amplitude from 0.0 (minimum) to 1.0 (maximum)
-func update(upd_duration_a, upd_ampl_a, upd_duration_b, upd_ampl_b):
+func update_pleasure(upd_duration_a, upd_ampl_a, upd_duration_b, upd_ampl_b):
+	
+	current_mode = EstimMode.Pleasure
 	duration_a = upd_duration_a
+	position_a = 2 * duration_a  # forces to begin a new ramp
 	freq_a_min = freq_min
 	freq_a_incr = (freq_max - freq_min) / upd_duration_a
 	var sig_ampl = (ampl_min + (ampl_max - ampl_min) * upd_ampl_a) / 2
@@ -73,12 +82,45 @@ func update(upd_duration_a, upd_ampl_a, upd_duration_b, upd_ampl_b):
 	ampl_a_incr = sig_ampl / upd_duration_a
 
 	duration_b = upd_duration_b
+	position_b = 2 * duration_b  # forces to begin a new ramp
 	freq_b_min = freq_min
 	freq_b_incr = (freq_max - freq_min) / upd_duration_b
 	sig_ampl = (ampl_min + (ampl_max - ampl_min) * upd_ampl_b) / 2
 	ampl_b_min = sig_ampl
 	ampl_b_incr = sig_ampl / upd_duration_b
 
+# Update signal generation in pain mode. upd_wait_min/max is the minimum and maximum time between
+# pulses, and upd_ampl amplitude from 0.0 (minimum) to 1.0 (maximum)
+func update_pain(upd_wait_min, upd_wait_max, upd_ampl_a, upd_ampl_b):
+	
+	current_mode = EstimMode.Pain
+	
+	pain_pulse_a = 0
+	pain_pulse_b = 0
+
+	var sig_ampl = (pain_min + (pain_max - pain_min) * upd_ampl_a)
+	pain_ampl_a = sig_ampl
+	sig_ampl = (pain_min + (pain_max - pain_min) * upd_ampl_b)
+	pain_ampl_b = sig_ampl
+	
+	pain_wait_min = upd_wait_min
+	pain_wait_max = upd_wait_max
+	
+	pain_wait_a = rand_range(pain_wait_min, pain_wait_max)
+	pain_wait_b = rand_range(pain_wait_min, pain_wait_max)
+
+func update_calib(upd_calib_ampl, upd_ramp_up_time):
+	
+	current_mode = EstimMode.Calib
+	
+	calib_ampl = upd_calib_ampl
+	
+	ampl_a_min = 0.0
+	ampl_b_min = 0.0
+	
+	ampl_a_incr = calib_ampl / upd_ramp_up_time
+	ampl_b_incr = calib_ampl / upd_ramp_up_time
+	
 func fill_buffer(delta):
 	# update current frequencies and amplitudes
 	freq_a += freq_a_incr * delta
