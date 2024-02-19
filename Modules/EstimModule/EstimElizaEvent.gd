@@ -6,6 +6,7 @@ func _init():
 
 func registerTriggers(es):
 	es.addTrigger(self, Trigger.TalkingToNPC, "eliza")
+	es.addTrigger(self, Trigger.SceneAndStateHook, ["IntroMedical","sit"])
 	
 func run(_triggerID, _args):
 	addButtonUnlessLate("Estim", "Set up the estim equipment", "estimsetup")
@@ -15,5 +16,4 @@ func getPriority():
 
 func onButton(_method, _args):
 	if(_method == "estimsetup"):
-		GM.main.endCurrentScene()
 		runScene("EstimSetupScene")
